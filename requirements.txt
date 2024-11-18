@@ -1,0 +1,5 @@
+Flask==2.3.2
+zeep==4.1.0  # pour SOAP
+requests==2.31.0  # pour interroger les services REST
+Flask-GraphQL==2.0.1  # pour le support GraphQL
+folium
