@@ -6,129 +6,94 @@
     <title>Planificateur de trajet</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="/static/main.css">
 </head>
 <body>
     <div class="navigation-panel">
-        <h2>Configurer votre trajet</h2>
-        <form action="/calculate_route" method="POST">
+        <h2>Planifiez votre Trajet</h2>
+        <form method="POST" action="/calculate_route" class="details-panel">
             <div class="form-group">
-                <label for="origin_city">Point de départ :</label>
-                <input type="text" id="origin_city" name="origin_city" class="form-control" required>
+                <label for="origin_city">Ville de départ</label>
+                <input type="text" class="form-control" id="origin_city" name="origin_city" required>
             </div>
             <div class="form-group">
-                <label for="destination_city">Point d'arrivée :</label>
-                <input type="text" id="destination_city" name="destination_city" class="form-control" required>
+                <label for="destination_city">Ville d'arrivée</label>
+                <input type="text" class="form-control" id="destination_city" name="destination_city" required>
             </div>
             <div class="form-group">
-                <label for="car_id">Sélectionnez un véhicule :</label>
-                <select id="car_id" name="car_id" class="form-control" required>
+                <label for="car_id">Choisir un véhicule</label>
+                <select class="form-control" id="car_id" name="car_id" required>
                     {% for car in vehicles %}
-                        <option value="{{ car.id }}">{{ car.naming.make }} {{ car.naming.model }}</option>
+                    <option value="{{ car.id }}">
+                        {{ car.naming.make }} {{ car.naming.model }} (Autonomie : {{ car.range.chargetrip_range.best }} km)
+                    </option>
                     {% endfor %}
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary">Planifier</button>
+            <button type="submit" class="btn btn-primary btn-block">Calculer</button>
         </form>
-
-        <!-- Zone d'affichage des informations sur le véhicule et le trajet -->
-        <div id="carInfo" class="details-panel" style="display: none;">
-            <h3>Informations du véhicule</h3>
-            <p><strong>Modèle :</strong> <span id="carModel"></span></p>
-            <p><strong>Autonomie (optimale) :</strong> <span id="carRangeOptimal"></span> km</p>
-            <p><strong>Autonomie (minimale) :</strong> <span id="carRangeMinimal"></span> km</p>
-            <p><strong>Capacité utilisable :</strong> <span id="carBatteryAvailable"></span> kWh</p>
-            <p><strong>Capacité totale :</strong> <span id="carBatteryMax"></span> kWh</p>
-            <h3>Détails du trajet</h3>
-            <p><strong>Distance :</strong> <span id="tripDistance"></span> km</p>
-            <p><strong>Durée :</strong> <span id="tripDuration"></span></p>
+        <div id="result" class="details-panel" style="display: none;">
+            <h4>Informations sur le Trajet</h4>
+            <p id="distance"></p>
+            <p id="duration"></p>
         </div>
     </div>
-
     <div id="mapContainer"></div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script>
-        var mapView = L.map('mapContainer').setView([48.8566, 2.3522], 10);
+        var mapView = L.map('mapContainer').setView([48.8566, 2.3522], 6);
 
-        // Couche sombre pour la carte
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-            subdomains: 'abcd',
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Données &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
             maxZoom: 19
         }).addTo(mapView);
 
-        // Soumission du formulaire
         $('form').submit(function(event) {
             event.preventDefault();
-            var inputData = $(this).serialize();
+            var formData = $(this).serialize();
 
-            $.post('/calculate_route', inputData, function(data) {
-                if (data.error) {
-                    alert(data.error);
+            $('#result').hide();
+            mapView.eachLayer(function(layer) {
+                if (layer instanceof L.Marker || layer instanceof L.Polyline) {
+                    mapView.removeLayer(layer);
+                }
+            });
+
+            $.post('/calculate_route', formData, function(response) {
+                if (response.error) {
+                    alert(response.error);
                     return;
                 }
 
-                // Variables pour les données reçues
-                var itinerary = data.route_path;
-                var chargeStations = data.charging_stations;
-                var routeCoordinates = itinerary.map(function(point) { return [point[0], point[1]] });
+                var route = response.route_path;
+                var stations = response.charging_stations;
+                var latlngs = route.map(coord => [coord[0], coord[1]]);
 
-                // Effacer les couches précédentes (utile pour plusieurs soumissions)
-                mapView.eachLayer(function(layer) {
-                    if (layer instanceof L.Marker || layer instanceof L.Polyline) {
-                        mapView.removeLayer(layer);
-                    }
-                });
+                var polyline = L.polyline(latlngs, { color: 'blue' }).addTo(mapView);
 
-                // Tracer l'itinéraire
-                L.polyline(routeCoordinates, {color: 'green'}).addTo(mapView);
+                var start = latlngs[0];
+                var end = latlngs[latlngs.length - 1];
+                L.marker(start).bindPopup('Départ').addTo(mapView);
+                L.marker(end).bindPopup('Arrivée').addTo(mapView);
 
-                // Ajouter des pointeurs pour le départ et l'arrivée
-                var startPoint = routeCoordinates[0];
-                var endPoint = routeCoordinates[routeCoordinates.length - 1];
-                L.marker(startPoint, {icon: createCustomIcon('red')}).bindPopup('Départ').addTo(mapView);
-                L.marker(endPoint, {icon: createCustomIcon('red')}).bindPopup('Arrivée').addTo(mapView);
-
-                // Ajouter des pointeurs pour les stations de recharge
-                chargeStations.forEach(function(station) {
-                    var coordinates = station.location.coordinates;
-                    L.marker([coordinates[1], coordinates[0]], {icon: createCustomIcon('green')})
-                        .bindPopup(`<b>${station.name}</b><br>Puissance: ${station.power || 'N/A'} kW`)
+                stations.forEach(station => {
+                    var stationCoords = station.location.coordinates;
+                    L.marker([stationCoords[1], stationCoords[0]])
+                        .bindPopup(`<b>${station.name}</b><br>Puissance : ${station.power || 'N/A'} kW`)
                         .addTo(mapView);
                 });
 
-                // Adapter la vue à l'ensemble de l'itinéraire
-                mapView.fitBounds(L.latLngBounds(routeCoordinates));
+                mapView.fitBounds(polyline.getBounds());
 
-                // Mettre à jour les détails dans la section d'informations
-                $('#carModel').text(data.car_specs.brand + ' ' + data.car_specs.model);
-                $('#carRangeOptimal').text(data.car_specs.optimal_range);
-                $('#carRangeMinimal').text(data.car_specs.worst_range);
-                $('#carBatteryAvailable').text(data.car_specs.battery_capacity);
-                $('#carBatteryMax').text(data.car_specs.full_capacity);
-                $('#tripDistance').text(data.total_distance);
-                $('#tripDuration').text(data.travel_time);
-
-                $('#carInfo').show();
-            }).fail(function(xhr) {
-                alert('Une erreur est survenue lors de la récupération des données. Vérifiez votre connexion ou réessayez.');
+                $('#distance').text('Distance totale : ' + response.total_distance);
+                $('#duration').text('Durée estimée : ' + response.travel_time);
+                $('#result').show();
+            }).fail(function() {
+                alert('Une erreur est survenue. Veuillez réessayer.');
             });
         });
-
-        // Fonction pour créer une icône personnalisée
-        function createCustomIcon(color) {
-            return L.icon({
-                iconUrl: `https://cdn.jsdelivr.net/gh/pointhi/leaflet-color-markers@master/img/marker-icon-${color}.png`,
-                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-                iconSize: [25, 41],
-                iconAnchor: [12, 41],
-                popupAnchor: [1, -34],
-                shadowSize: [41, 41]
-            });
-        }
     </script>
 </body>
 </html>
