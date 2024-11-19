@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import requests
 from math import radians, sin, cos, sqrt, atan2
 
-application = Flask(__name__)
+app = Flask(__name__)
 
 API_KEY_ROUTE = '715a3b7b-0aa4-4829-9429-6ba3038dd58f'
 ROUTING_SERVICE_URL = "https://graphhopper.com/api/1/route"
@@ -59,12 +59,12 @@ def retrieve_vehicle_data():
     response.raise_for_status()
     vehicles_info = response.json().get('data', {}).get('vehicleList', [])
 
-@application.route('/')
+@app.route('/')
 def home():
     retrieve_vehicle_data()
     return render_template('home.html', vehicles=vehicles_info)
 
-@application.route('/calculate_route', methods=['POST'])
+@app.route('/calculate_route', methods=['POST'])
 def calculate_route():
     origin_city = request.form['origin_city']
     destination_city = request.form['destination_city']
@@ -195,4 +195,4 @@ def haversine_distance(coord1, coord2):
     return R * 2 * atan2(sqrt(a), sqrt(1 - a))
 
 if __name__ == '__main__':
-    application.run(debug=True)
+    app.run(debug=True)
