@@ -4,7 +4,7 @@
     <!-- Définition du type de document et des informations de base -->
     <meta charset="UTF-8"> <!-- Encodage UTF-8 pour supporter les caractères spéciaux -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Rendre la page responsive sur mobile -->
-    <title>Planificateur de trajet</title> <!-- Titre de la page affiché dans l'onglet du navigateur -->
+    <title>ElectriPath</title> <!-- Titre de la page affiché dans l'onglet du navigateur -->
 
     <!-- Inclusion de la feuille de styles de Leaflet pour les cartes -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
@@ -18,25 +18,25 @@
 <body>
     <!-- Panneau de navigation pour la saisie des données -->
     <div class="navigation-panel">
-        <h2>Planifiez votre Trajet</h2> <!-- Titre principal de l'interface -->
+        <h2>ElectriPath</h2> <!-- Titre principal de l'interface -->
 
         <!-- Formulaire pour entrer les informations nécessaires au calcul du trajet -->
         <form method="POST" action="/calculate_route" class="details-panel">
             <!-- Champ pour saisir la ville de départ -->
             <div class="form-group">
-                <label for="origin_city">Ville de départ</label>
+                <label for="origin_city">Lieu de départ</label>
                 <input type="text" class="form-control" id="origin_city" name="origin_city" required>
             </div>
 
             <!-- Champ pour saisir la ville d'arrivée -->
             <div class="form-group">
-                <label for="destination_city">Ville d'arrivée</label>
+                <label for="destination_city">Lieu d'arrivée</label>
                 <input type="text" class="form-control" id="destination_city" name="destination_city" required>
             </div>
 
             <!-- Menu déroulant pour choisir un véhicule parmi ceux disponibles -->
             <div class="form-group">
-                <label for="car_id">Choisir un véhicule</label>
+                <label for="car_id">Choisir votre véhicule</label>
                 <select class="form-control" id="car_id" name="car_id" required>
                     <!-- Génération dynamique des options en fonction des véhicules disponibles -->
                     {% for car in vehicles %}
@@ -48,12 +48,12 @@
             </div>
 
             <!-- Bouton pour soumettre le formulaire -->
-            <button type="submit" class="btn btn-primary btn-block">Calculer</button>
+            <button type="submit" class="btn btn-primary btn-block">Démarrer</button>
         </form>
 
         <!-- Panneau pour afficher les résultats après calcul -->
         <div id="result" class="details-panel" style="display: none;">
-            <h4>Informations sur le Trajet</h4>
+            <h4>Données sur votre Trajet</h4>
             <p id="distance"></p> <!-- Affichage de la distance totale -->
             <p id="duration"></p> <!-- Affichage de la durée estimée -->
         </div>
