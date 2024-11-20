@@ -1,28 +1,44 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planificateur de trajet</title>
+    <!-- Définition du type de document et des informations de base -->
+    <meta charset="UTF-8"> <!-- Encodage UTF-8 pour supporter les caractères spéciaux -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Rendre la page responsive sur mobile -->
+    <title>Planificateur de trajet</title> <!-- Titre de la page affiché dans l'onglet du navigateur -->
+
+    <!-- Inclusion de la feuille de styles de Leaflet pour les cartes -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+
+    <!-- Inclusion de Bootstrap pour styliser la page rapidement -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+    <!-- Inclusion de mes propres styles CSS personnalisés -->
     <link rel="stylesheet" href="/static/main.css">
 </head>
 <body>
+    <!-- Panneau de navigation pour la saisie des données -->
     <div class="navigation-panel">
-        <h2>Planifiez votre Trajet</h2>
+        <h2>Planifiez votre Trajet</h2> <!-- Titre principal de l'interface -->
+
+        <!-- Formulaire pour entrer les informations nécessaires au calcul du trajet -->
         <form method="POST" action="/calculate_route" class="details-panel">
+            <!-- Champ pour saisir la ville de départ -->
             <div class="form-group">
                 <label for="origin_city">Ville de départ</label>
                 <input type="text" class="form-control" id="origin_city" name="origin_city" required>
             </div>
+
+            <!-- Champ pour saisir la ville d'arrivée -->
             <div class="form-group">
                 <label for="destination_city">Ville d'arrivée</label>
                 <input type="text" class="form-control" id="destination_city" name="destination_city" required>
             </div>
+
+            <!-- Menu déroulant pour choisir un véhicule parmi ceux disponibles -->
             <div class="form-group">
                 <label for="car_id">Choisir un véhicule</label>
                 <select class="form-control" id="car_id" name="car_id" required>
+                    <!-- Génération dynamique des options en fonction des véhicules disponibles -->
                     {% for car in vehicles %}
                     <option value="{{ car.id }}">
                         {{ car.naming.make }} {{ car.naming.model }} (Autonomie : {{ car.range.chargetrip_range.best }} km)
@@ -30,30 +46,42 @@
                     {% endfor %}
                 </select>
             </div>
+
+            <!-- Bouton pour soumettre le formulaire -->
             <button type="submit" class="btn btn-primary btn-block">Calculer</button>
         </form>
+
+        <!-- Panneau pour afficher les résultats après calcul -->
         <div id="result" class="details-panel" style="display: none;">
             <h4>Informations sur le Trajet</h4>
-            <p id="distance"></p>
-            <p id="duration"></p>
+            <p id="distance"></p> <!-- Affichage de la distance totale -->
+            <p id="duration"></p> <!-- Affichage de la durée estimée -->
         </div>
     </div>
+
+    <!-- Conteneur pour afficher la carte interactive -->
     <div id="mapContainer"></div>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <!-- Inclusion des bibliothèques JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script> <!-- jQuery pour simplifier les manipulations DOM -->
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script> <!-- Leaflet pour la gestion des cartes -->
+
     <script>
+        // Initialisation de la carte Leaflet avec une vue centrée sur Paris
         var mapView = L.map('mapContainer').setView([48.8566, 2.3522], 6);
 
+        // Chargement des tuiles de carte depuis OpenStreetMap
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: 'Données &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
             maxZoom: 19
         }).addTo(mapView);
 
+        // Gestionnaire d'événement pour soumettre le formulaire sans recharger la page
         $('form').submit(function(event) {
-            event.preventDefault();
-            var formData = $(this).serialize();
+            event.preventDefault(); // Empêche le rechargement de la page
+            var formData = $(this).serialize(); // Sérialise les données du formulaire
 
+            // Masquer les résultats précédents et réinitialiser les couches de la carte
             $('#result').hide();
             mapView.eachLayer(function(layer) {
                 if (layer instanceof L.Marker || layer instanceof L.Polyline) {
@@ -61,23 +89,28 @@
                 }
             });
 
+            // Envoi de la requête POST au serveur pour calculer le trajet
             $.post('/calculate_route', formData, function(response) {
                 if (response.error) {
-                    alert(response.error);
+                    alert(response.error); // Affiche un message d'erreur si nécessaire
                     return;
                 }
 
+                // Récupération et affichage du chemin et des stations de recharge
                 var route = response.route_path;
                 var stations = response.charging_stations;
                 var latlngs = route.map(coord => [coord[0], coord[1]]);
 
+                // Dessiner le trajet sur la carte
                 var polyline = L.polyline(latlngs, { color: 'blue' }).addTo(mapView);
 
+                // Ajouter des marqueurs pour le point de départ et d'arrivée
                 var start = latlngs[0];
                 var end = latlngs[latlngs.length - 1];
                 L.marker(start).bindPopup('Départ').addTo(mapView);
                 L.marker(end).bindPopup('Arrivée').addTo(mapView);
 
+                // Ajouter des marqueurs pour les bornes de recharge
                 stations.forEach(station => {
                     var stationCoords = station.location.coordinates;
                     L.marker([stationCoords[1], stationCoords[0]])
@@ -85,13 +118,15 @@
                         .addTo(mapView);
                 });
 
+                // Ajuster la vue de la carte pour inclure tout l'itinéraire
                 mapView.fitBounds(polyline.getBounds());
 
+                // Affichage des informations sur le trajet
                 $('#distance').text('Distance totale : ' + response.total_distance);
                 $('#duration').text('Durée estimée : ' + response.travel_time);
                 $('#result').show();
             }).fail(function() {
-                alert('Une erreur est survenue. Veuillez réessayer.');
+                alert('Une erreur est survenue. Veuillez réessayer.'); // Gestion des erreurs
             });
         });
     </script>
