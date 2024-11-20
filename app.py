@@ -2,18 +2,16 @@
 from flask import Flask, render_template, request, jsonify  # Flask pour créer l'application web
 import requests  # Pour effectuer des requêtes HTTP
 from math import radians, sin, cos, sqrt, atan2  # Pour les calculs de distance géographique
-from dotenv import load_dotenv  # Pour charger les variables d'environnement
-import os  # Pour accéder aux variables d'environnement
 
 # Initialisation de l'application Flask
 app = Flask(__name__)
 
 # Chargement des clés API et des URLs à partir des variables d'environnement
-API_KEY_ROUTE = os.getenv('API_KEY_ROUTE')
-ROUTING_SERVICE_URL = os.getenv('ROUTING_SERVICE_URL')
-EV_CHARGING_CLIENT_ID = os.getenv('EV_CHARGING_CLIENT_ID')
-EV_CHARGING_APP_ID = os.getenv('EV_CHARGING_APP_ID')
-EV_CHARGING_ENDPOINT = os.getenv('EV_CHARGING_ENDPOINT')
+API_KEY_ROUTE = '715a3b7b-0aa4-4829-9429-6ba3038dd58f'
+ROUTING_SERVICE_URL = "https://graphhopper.com/api/1/route"
+EV_CHARGING_CLIENT_ID = '673d0ac8bd45c1778cd88d28'
+EV_CHARGING_APP_ID = '673d0ac8bd45c1778cd88d2a'
+EV_CHARGING_ENDPOINT = 'https://api.chargetrip.io/graphql'
 
 # Liste globale pour stocker les informations des véhicules électriques
 vehicles_info = []
